@@ -4040,37 +4040,111 @@ document.getElementById('s-projects').textContent = projects;
   };
 })();
 </script>
-  <!-- استدعاء مكتبات فايربيس الأساسية وقاعدة البيانات عبر الرابط مباشرة -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+ <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
-  // الكود الخاص بمشروعك من الصورة image_b3cdc9.png
+<script>
   const firebaseConfig = {
-    apiKey: "AIzaSyDzqwxaTH8SCiRgmKxgf9KAhLx8KprkRSU",
+    apiKey: "AIzaSyDzqwxaaTH8SCiRgmKxgf9KAhLx8KprkRSU",
     authDomain: "nhs-map-72487.firebaseapp.com",
     databaseURL: "https://nhs-map-72487-default-rtdb.firebaseio.com",
     projectId: "nhs-map-72487",
     storageBucket: "nhs-map-72487.firebasestorage.app",
     messagingSenderId: "478914869",
-    appId: "1:478914869:web:c5c92c77693bb4104bc47c",
-    measurementId: "G-HT4BD6K7GD"
+    appId: "1:478914869:web:c5c92c77693bb4104bc47c"
   };
 
-  // بدء تشغيل فايربيس
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
+  // تهيئة فايربيس
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
 
-  // هنا نقوم بجلب البيانات من فايربيس
-  // استبدل 'myTracks' بالاسم الذي اخترته عند رفع ملف الإكسل داخل الفايربيس
-  const dataRef = ref(database, 'myTracks'); 
-  
-  onValue(dataRef, (snapshot) => {
-    const data = snapshot.val();
-    console.log("البيانات القادمة من فايربيس:", data);
+  let DATA = []; // المصفوفة التي تعتمد عليها الخريطة
+
+  database.ref(''/'').once('value').then((snapshot) => {
+    const rawData = snapshot.val();
     
-    // TODO: هنا سنضع الكود الذي يأخذ هذه البيانات ويضعها داخل جدولك أو خريطتك بنفس شكل موقعك الحالي
+    if (rawData) {
+      console.log("البيانات القادمة من فايربيس:", rawData);
+      
+      DATA = Array.isArray(rawData) ? rawData : Object.values(rawData);
+      
+      if (typeof renderMarkersCustom === 'function') renderMarkersCustom(DATA);
+      if (typeof renderList === 'function') renderList(DATA);
+      
+      const count = document.getElementById('listCount');
+      if (count) count.innerText = DATA.length + ' مؤسسة';
+
+      const editSelect = document.getElementById('editSelect');
+      if (editSelect) {
+        editSelect.innerHTML = '<option value="">اختر مؤسسة لتعديل بياناتها...</option>';
+        DATA.forEach((item, index) => {
+          if (item) {
+            const name = item['إسم المؤسسة'] || ('مؤسسة ' + (index + 1));
+            editSelect.innerHTML += `<option value="${index}">${name}</option>`;
+          }
+        });
+      }
+    } else {
+      console.log("لا توجد بيانات في فايربيس أو المسار غير صحيح.");
+    }
+  }).catch((error) => {
+    console.error("حدث خطأ أثناء جلب البيانات: ", error);
   });
+
+  // دالة تحميل بيانات المؤسسة عند اختيارها من القائمة
+  function loadInstitutionData() {
+    const select = document.getElementById('editSelect');
+    const index = select.value;
+    if (index === "") {
+      if(document.getElementById('f_name')) document.getElementById('f_name').value = '';
+      if(document.getElementById('f_wilaya')) document.getElementById('f_wilaya').value = '';
+      return;
+    }
+    
+    const item = DATA[index];
+    if (item) {
+      if(document.getElementById('f_name')) document.getElementById('f_name').value = item['إسم المؤسسة'] || '';
+      if(document.getElementById('f_wilaya')) document.getElementById('f_wilaya').value = item['الولاية'] || '';
+    }
+  }
+
+  // دالة حفظ التعديلات وإرسالها لفايربيس
+  function saveInstitutionData() {
+    const select = document.getElementById('editSelect');
+    const index = select.value;
+    
+    if (index === "") {
+      alert("الرجاء اختيار مؤسسة أولاً لتعديلها");
+      return;
+    }
+
+    const newName = document.getElementById('f_name') ? document.getElementById('f_name').value.trim() : '';
+    const newWilaya = document.getElementById('f_wilaya') ? document.getElementById('f_wilaya').value.trim() : '';
+
+    if (newName === "") {
+      alert("لا يمكن ترك اسم المؤسسة فارغاً");
+      return;
+    }
+
+    // تحديث البيانات في المسار (myTracks)
+    database.ref('myTracks/' + index).update({
+      'إسم المؤسسة': newName,
+      'الولاية': newWilaya
+    }).then(() => {
+      alert("تم حفظ التعديلات بنجاح وتحديث الخريطة!");
+      
+      // تحديث البيانات في الصفحة فوراً
+      DATA[index]['إسم المؤسسة'] = newName;
+      DATA[index]['الولاية'] = newWilaya;
+      
+      if (typeof renderMarkersCustom === 'function') renderMarkersCustom(DATA);
+      if (typeof renderList === 'function') renderList(DATA);
+      select.options[select.selectedIndex].text = newName;
+      
+    }).catch((error) => {
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
+    });
+  }
 </script>
 </body>
 </html>
