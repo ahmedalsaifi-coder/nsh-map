@@ -4040,5 +4040,37 @@ document.getElementById('s-projects').textContent = projects;
   };
 })();
 </script>
+  <!-- استدعاء مكتبات فايربيس الأساسية وقاعدة البيانات عبر الرابط مباشرة -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  // الكود الخاص بمشروعك من الصورة image_b3cdc9.png
+  const firebaseConfig = {
+    apiKey: "AIzaSyDzqwxaTH8SCiRgmKxgf9KAhLx8KprkRSU",
+    authDomain: "nhs-map-72487.firebaseapp.com",
+    databaseURL: "https://nhs-map-72487-default-rtdb.firebaseio.com",
+    projectId: "nhs-map-72487",
+    storageBucket: "nhs-map-72487.firebasestorage.app",
+    messagingSenderId: "478914869",
+    appId: "1:478914869:web:c5c92c77693bb4104bc47c",
+    measurementId: "G-HT4BD6K7GD"
+  };
+
+  // بدء تشغيل فايربيس
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  // هنا نقوم بجلب البيانات من فايربيس
+  // استبدل 'myTracks' بالاسم الذي اخترته عند رفع ملف الإكسل داخل الفايربيس
+  const dataRef = ref(database, 'myTracks'); 
+  
+  onValue(dataRef, (snapshot) => {
+    const data = snapshot.val();
+    console.log("البيانات القادمة من فايربيس:", data);
+    
+    // TODO: هنا سنضع الكود الذي يأخذ هذه البيانات ويضعها داخل جدولك أو خريطتك بنفس شكل موقعك الحالي
+  });
+</script>
 </body>
 </html>
