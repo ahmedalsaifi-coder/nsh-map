@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b6b68">
+<title>الخريطة التفاعلية للمؤسسات والمواقع</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{--primary:#0b6b68;--primary2:#0e8b86;--bg:#f5f7f8;--card:#fff;--text:#17202a;--muted:#6b7785;--border:#e4e8eb;--danger:#d64545;--shadow:0 8px 28px rgba(0,0,0,.10)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+#app{height:100%;min-height:100vh;display:flex;overflow:hidden}
+#mapShell{position:relative;flex:1 1 auto;min-width:0;min-height:0;height:100%}
+#map{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;min-height:320px;background:#e9eef0;z-index:1}
+.leaflet-container{width:100%;height:100%;font-family:Tahoma,"Segoe UI",Arial,sans-serif}
+.topbar{position:absolute;z-index:1000;top:14px;right:14px;left:14px;min-height:58px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;padding:8px 12px}
+.brand{font-weight:800;color:var(--primary);white-space:nowrap;font-size:17px}.status{font-size:12px;color:var(--muted);margin-right:auto}
+.btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 12px;color:var(--text)}.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.danger{color:#fff;background:var(--danger);border-color:var(--danger)}.btn.small{padding:6px 9px;font-size:12px}
+#side{position:absolute;z-index:1000;top:84px;right:14px;width:370px;max-height:calc(100% - 98px);background:rgba(255,255,255,.98);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:10px;border-bottom:1px solid var(--border)}.nav button{border:0;background:#f4f6f7;border-radius:9px;padding:9px 5px;font-size:12px}.nav button.active{background:#dcefed;color:var(--primary);font-weight:800}
+.panel{display:none;overflow:auto;padding:13px}.panel.active{display:block}.sectionTitle{font-weight:800;margin:0 0 10px}.hint{font-size:12px;color:var(--muted);line-height:1.7}
+.field{margin-bottom:10px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--border);border-radius:9px;padding:9px;background:#fff;outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary)}
+.row{display:flex;gap:8px}.row>*{flex:1}.statsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fff}.stat b{display:block;font-size:20px;color:var(--primary)}.stat span{font-size:11px;color:var(--muted)}
+.legendItem{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}.dot{width:13px;height:13px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #bbb;flex:none}
+.result{border:1px solid var(--border);border-radius:11px;padding:9px;margin-bottom:7px;background:#fff}.result:hover{border-color:#b8d7d5}.result b{display:block;margin-bottom:4px}.result small{color:var(--muted)}
+.tableWrap{overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:48vh}table{border-collapse:collapse;width:100%;font-size:11px;direction:rtl}th,td{padding:7px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:right}th{position:sticky;top:0;background:#f4f6f7;z-index:1}
+.modalBack{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:2000;display:none;align-items:center;justify-content:center;padding:15px}.modalBack.show{display:flex}.modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.25);padding:16px}.modalHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.modalActions{display:flex;gap:8px;justify-content:flex-start;margin-top:14px}.notice{padding:9px 10px;border-radius:10px;background:#f1f7f6;border:1px solid #d7ebe8;font-size:12px;line-height:1.7;margin-bottom:10px}.notice.warn{background:#fff7e7;border-color:#f0ddb0}.empty{padding:20px;text-align:center;color:var(--muted);font-size:13px}.fileBox{border:2px dashed #cfd8dc;border-radius:12px;padding:16px;text-align:center}
+#toast{position:fixed;z-index:3000;bottom:18px;left:18px;right:18px;display:flex;justify-content:center;pointer-events:none}#toast span{background:#17202a;color:#fff;padding:10px 15px;border-radius:10px;box-shadow:var(--shadow);font-size:12px;display:none}
+.mapOverlay{position:absolute;z-index:900;bottom:18px;left:18px;background:#fff;border-radius:12px;padding:8px 11px;box-shadow:var(--shadow);font-size:11px;color:var(--muted)}
+#loading{position:absolute;inset:0;z-index:1500;background:rgba(255,255,255,.86);display:flex;align-items:center;justify-content:center}.loader{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 22px;box-shadow:var(--shadow);text-align:center}.spinner{width:28px;height:28px;border:3px solid #dce4e5;border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}@keyframes spin{to{transform:rotate(360deg)}}
+.kpiBar{height:7px;border-radius:20px;background:#edf1f2;overflow:hidden;margin-top:5px}.kpiBar i{display:block;height:100%;background:var(--primary)}
+.custom-marker{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 2px 6px rgba(0,0,0,.25)}
+.leaflet-popup-content{margin:12px 14px}.popup{min-width:250px;max-width:340px;font-family:Tahoma,Arial,sans-serif;font-size:12px}.popup h3{margin:0 0 8px;color:var(--primary)}.popupRow{display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-bottom:1px solid #eee}.popupRow span{color:#777}.popupRow b{max-width:190px;overflow-wrap:anywhere}.popupActions{margin-top:9px;display:flex;gap:6px}.popupActions button{border:0;background:var(--primary);color:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}.popupActions button.secondary{background:#eef4f3;color:var(--primary)}
+@media(max-width:900px){#mapShell{min-height:100vh}#map{min-height:100vh}#side{right:8px;left:8px;width:auto;top:auto;bottom:8px;max-height:47%;border-radius:14px}.topbar{right:8px;left:8px;top:8px}.brand{font-size:14px}.status{display:none}}
+@media(max-width:600px){.topbar .btn{padding:8px}.topbar .brand{max-width:140px;overflow:hidden;text-overflow:ellipsis}.nav{grid-template-columns:repeat(3,1fr)}.formGrid{grid-template-columns:1fr}.mapOverlay{left:8px;bottom:8px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="mapShell">
+    <div id="map" aria-label="الخريطة التفاعلية"></div>
+    <div id="loading"><div class="loader"><div class="spinner"></div><b>جاري تحميل البيانات…</b><div class="hint">يتم الاتصال بـ SheetDB</div></div></div>
+    <div class="topbar">
+      <div class="brand">الخريطة التفاعلية للمؤسسات والمواقع</div>
+      <div id="status" class="status">جاهز</div>
+      <button class="btn small" id="refreshBtn" type="button">↻ تحديث</button>
+      <button class="btn small" id="settingsBtn" type="button">⚙ الإعدادات</button>
+    </div>
+    <div class="mapOverlay" id="mapInfo">الخريطة: عُمان</div>
+  </div>
+
+  <aside id="side">
+    <div class="nav">
+      <button class="active" data-panel="mapPanel" type="button">الخريطة</button>
+      <button data-panel="statsPanel" type="button">الإحصائيات</button>
+      <button data-panel="searchPanel" type="button">البحث</button>
+      <button data-panel="dataPanel" type="button">البيانات</button>
+      <button data-panel="ioPanel" type="button">استيراد/تصدير</button>
+      <button data-panel="settingsPanel" type="button">الإعدادات</button>
+    </div>
+
+    <section id="mapPanel" class="panel active">
+      <h3 class="sectionTitle">تصفية الخريطة</h3>
+      <div class="field"><label for="typeFilter">نوع الاستخدام</label><select id="typeFilter"><option value="">كل الأنواع</option></select></div>
+      <div class="field"><label for="wilayaFilter">الولاية</label><select id="wilayaFilter"><option value="">كل الولايات</option></select></div>
+      <div class="field"><label for="quickSearch">بحث سريع</label><input id="quickSearch" placeholder="اسم المؤسسة، القرية، المربع…"></div>
+      <div id="legend"></div>
+      <div class="hint">اضغط على أي علامة في الخريطة لعرض التفاصيل. ألوان العلامات تتغير حسب نوع الاستخدام.</div>
+    </section>
+
+    <section id="statsPanel" class="panel">
+      <h3 class="sectionTitle">الإحصائيات السكانية والمؤسسية</h3>
+      <div class="statsGrid">
+        <div class="stat"><b id="sTotal">0</b><span>إجمالي المواقع</span></div>
+        <div class="stat"><b id="sPopulation">0</b><span>إجمالي السكان</span></div>
+        <div class="stat"><b id="sTypes">0</b><span>أنواع الاستخدام</span></div>
+        <div class="stat"><b id="sWilayas">0</b><span>الولايات</span></div>
+      </div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+      <b>حسب نوع الاستخدام</b><div id="typeStats" style="margin-top:8px"></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+      <b>حسب الولاية</b><div id="wilayaStats" style="margin-top:8px"></div>
+    </section>
+
+    <section id="searchPanel" class="panel">
+      <h3 class="sectionTitle">البحث المتقدم</h3>
+      <div class="field"><label for="searchAll">بحث في جميع الحقول</label><input id="searchAll" placeholder="اكتب كلمة أو جزءاً من اسم…"></div>
+      <div class="row">
+        <div class="field"><label for="searchType">نوع الاستخدام</label><select id="searchType"><option value="">الكل</option></select></div>
+        <div class="field"><label for="searchWilaya">الولاية</label><select id="searchWilaya"><option value="">الكل</option></select></div>
+      </div>
+      <div id="searchResults"></div>
+    </section>
+
+    <section id="dataPanel" class="panel">
+      <h3 class="sectionTitle">إدارة البيانات</h3>
+      <div class="notice warn">الإضافة والتعديل والحذف تعمل عبر SheetDB. لا تجعل صلاحيات الكتابة عامة إلا بعد تقييد API في SheetDB.</div>
+      <div class="row" style="margin-bottom:10px"><button class="btn primary" id="addBtn" type="button">＋ إضافة</button><button class="btn" id="tableRefreshBtn" type="button">تحديث الجدول</button></div>
+      <div class="tableWrap"><table id="dataTable"></table></div>
+    </section>
+
+    <section id="ioPanel" class="panel">
+      <h3 class="sectionTitle">الاستيراد والتصدير</h3>
+      <div class="notice">التصدير يحفظ البيانات الحالية بصيغة CSV أو JSON. الاستيراد يضيف الصفوف إلى Google Sheet عبر SheetDB.</div>
+      <div class="row"><button class="btn primary" id="exportCsvBtn" type="button">تصدير CSV</button><button class="btn" id="exportJsonBtn" type="button">تصدير JSON</button></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+      <div class="fileBox">
+        <b>استيراد CSV</b><div class="hint" style="margin:7px 0">يفضل أن تكون أسماء الأعمدة في الصف الأول مطابقة لأسماء Google Sheet.</div>
+        <input id="csvFile" type="file" accept=".csv,text/csv">
+        <button class="btn primary" id="importCsvBtn" style="margin-top:10px" type="button">رفع البيانات</button>
+      </div>
+    </section>
+
+    <section id="settingsPanel" class="panel">
+      <h3 class="sectionTitle">إعدادات الربط</h3>
+      <div class="field"><label for="apiUrlSetting">SheetDB API</label><input id="apiUrlSetting" value="https://sheetdb.io/api/v1/0jsynku6a8alf"></div>
+      <div class="notice">هذه النسخة لا تحتاج Google Maps API Key. الخريطة تعمل بواسطة Leaflet مع OpenStreetMap.</div>
+      <div class="row"><button class="btn primary" id="saveSettingsBtn" type="button">حفظ وتشغيل</button><button class="btn" id="clearSettingsBtn" type="button">مسح الإعدادات</button></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0">
+      <div class="hint">يتم استخدام خرائط OpenStreetMap مع Leaflet. يجب إبقاء إسناد OpenStreetMap ظاهرًا على الخريطة. خادم البلاطات العام لديه سياسة استخدام عادلة، لذلك تجنب الاستخدام الكثيف أو التحميل الآلي الكبير.</div>
+    </section>
+  </aside>
+</div>
+
+<div id="modalBack" class="modalBack" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHead"><h3 id="modalTitle" style="margin:0">تعديل البيانات</h3><button class="btn" id="closeModalBtn" type="button">✕</button></div>
+    <div id="editForm" class="formGrid"></div>
+    <div class="modalActions"><button class="btn primary" id="saveRowBtn" type="button">حفظ</button><button class="btn" id="cancelModalBtn" type="button">إلغاء</button><button id="deleteBtn" class="btn danger" type="button" style="display:none;margin-right:auto">حذف</button></div>
+  </div>
+</div>
+<div id="toast" aria-live="polite"><span></span></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+'use strict';
+
+const DEFAULT_API='https://sheetdb.io/api/v1/0jsynku6a8alf';
+const STORAGE_KEY='oman_map_sheetdb_api';
+const API_BASE=window.location.protocol==='file:' ? DEFAULT_API : DEFAULT_API;
+let API=localStorage.getItem(STORAGE_KEY)||API_BASE;
+let rows=[],filteredRows=[],columns=[];
+let map=null,markerCluster=null,markersById=new Map(),editingId=null;
+let typeField='',nameField='',latField='',lngField='',popField='',wilayaField='',villageField='';
+let initialMapFit=true;
+
+const COLORS=['#e74c3c','#4f46e5','#f2b01e','#6b7280','#0ea5a4','#8b5cf6','#f97316','#16a34a','#db2777','#0891b2'];
+
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function toast(msg,ok=true){const s=$('toast').querySelector('span');s.textContent=msg;s.style.display='block';s.style.background=ok?'#17202a':'#a33';clearTimeout(toast.timer);toast.timer=setTimeout(()=>s.style.display='none',2800)}
+function setStatus(t){$('status').textContent=t}
+function num(v){if(v===null||v===undefined||v==='')return 0;const n=Number(String(v).replace(/,/g,'').trim());return Number.isFinite(n)?n:0}
+function normalize(s){return String(s??'').trim().toLowerCase().replace(/[\s_\-]/g,'')}
+function uniq(field){if(!field)return [];return [...new Set(rows.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'))}
+function guessField(names,candidates){for(const c of candidates){const exact=names.find(n=>normalize(n)===normalize(c));if(exact)return exact}for(const c of candidates){const part=names.find(n=>normalize(n).includes(normalize(c)));if(part)return part}return ''}
+
+function detectFields(){
+  nameField=guessField(columns,['إسم المؤسسة','اسم المؤسسة','المؤسسة','اسم','name','institution']);
+  typeField=guessField(columns,['نوع الإستخدام','نوع الاستخدام','نوع الاستخدام ','النوع','type','category']);
+  latField=guessField(columns,['LAT','lat','latitude','خط العرض','خط_العرض']);
+  lngField=guessField(columns,['LNG','lng','longitude','خط الطول','خط_الطول']);
+  popField=guessField(columns,['السكان','عدد السكان','population','pop']);
+  wilayaField=guessField(columns,['الولاية','wilaya','ولاية']);
+  villageField=guessField(columns,['القرية','village']);
+}
+function populateSelect(id,values,allLabel){
+  const el=$(id);el.innerHTML=`<option value="">${esc(allLabel)}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+}
+function populateFilters(){
+  populateSelect('typeFilter',uniq(typeField),'كل الأنواع');populateSelect('wilayaFilter',uniq(wilayaField),'كل الولايات');
+  populateSelect('searchType',uniq(typeField),'الكل');populateSelect('searchWilaya',uniq(wilayaField),'الكل');
+}
+function colorFor(type){
+  const t=String(type||'').toLowerCase();
+  if(t.includes('مستشفى'))return '#e74c3c';
+  if(t.includes('مركز'))return '#4f46e5';
+  if(t.includes('زراع'))return '#f2b01e';
+  if(t.includes('أخرى')||t.includes('اخرى'))return '#6b7280';
+  let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%COLORS.length;return COLORS[h];
+}
+function markerIcon(type){return L.divIcon({className:'',html:`<div class="custom-marker" style="background:${colorFor(type)}"></div>`,iconSize:[18,18],iconAnchor:[9,9],popupAnchor:[0,-9]})}
+function rowKey(row){const id=row.id??row.ID??row.Id;return String(id??'')}
+function popupHtml(row){
+  const title=row[nameField]||row.id||'موقع';
+  const keys=columns.filter(k=>String(row[k]??'')!=='').slice(0,10);
+  const main=keys.map(k=>`<div class="popupRow"><span>${esc(k)}</span><b>${esc(row[k])}</b></div>`).join('');
+  const id=rowKey(row);
+  return `<div class="popup" dir="rtl"><h3>${esc(title)}</h3>${main}<div class="popupActions"><button type="button" data-action="edit" data-id="${esc(id)}">تعديل</button><button type="button" class="secondary" data-action="zoom" data-id="${esc(id)}">تكبير</button></div></div>`;
+}
+
+const SHARQIYAH_CENTER=[22.60,58.62];
+const SHARQIYAH_ZOOM=8;
+
+function initMap(){
+  if(map)return;
+  map=L.map('map',{center:SHARQIYAH_CENTER,zoom:SHARQIYAH_ZOOM,zoomControl:true,scrollWheelZoom:true,preferCanvas:false});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+  markerCluster=L.markerClusterGroup({showCoverageOnHover:false,removeOutsideVisibleBounds:true,disableClusteringAtZoom:14,spiderfyOnMaxZoom:true,chunkedLoading:true});
+  map.addLayer(markerCluster);
+  map.on('popupopen',e=>{
+    const root=e.popup.getElement();if(!root)return;
+    root.querySelectorAll('[data-action="edit"]').forEach(btn=>btn.addEventListener('click',()=>openEdit(btn.dataset.id)));
+    root.querySelectorAll('[data-action="zoom"]').forEach(btn=>btn.addEventListener('click',()=>focusRow(btn.dataset.id)));
+  });
+  const refreshSize=()=>setTimeout(()=>map.invalidateSize({pan:false}),80);
+  refreshSize();
+  window.addEventListener('resize',refreshSize);
+}
+function validCoord(row){
+  const lat=num(row[latField]),lng=num(row[lngField]);
+  return Number.isFinite(lat)&&Number.isFinite(lng)&&!(lat===0&&lng===0)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
+}
+function renderMap(fit=false){
+  initMap();
+  markerCluster.clearLayers();markersById.clear();
+  const bounds=L.latLngBounds([]);let count=0;
+  filteredRows.forEach(row=>{
+    if(!validCoord(row))return;
+    const lat=num(row[latField]),lng=num(row[lngField]);
+    const id=rowKey(row)||`${lat},${lng},${row[nameField]||''}`;
+    const marker=L.marker([lat,lng],{title:String(row[nameField]||row.id||'موقع'),icon:markerIcon(row[typeField])});
+    marker.bindPopup(popupHtml(row),{maxWidth:360,autoPan:true});
+    marker.__rowId=id;markersById.set(id,marker);markerCluster.addLayer(marker);bounds.extend([lat,lng]);count++;
+  });
+  $('mapInfo').textContent=`المعروض على الخريطة: ${count.toLocaleString('ar')} موقع`;
+  // Always open on North Al Sharqiyah. Only zoom to filtered results after a user applies a filter.
+  if(fit&&count){
+    map.fitBounds(bounds,{padding:[40,40],maxZoom:11});
+  }else if(!fit){
+    map.setView(SHARQIYAH_CENTER,SHARQIYAH_ZOOM,{animate:false});
+  }
+  setTimeout(()=>map.invalidateSize({pan:false}),100);
+}
+function applyFilters(options={}){
+  const type=$('typeFilter').value,w=$('wilayaFilter').value,q=$('quickSearch').value.trim().toLowerCase();
+  filteredRows=rows.filter(r=>{
+    const okType=!type||String(r[typeField]??'')===type,okW=!w||String(r[wilayaField]??'')===w;
+    const text=Object.values(r).join(' ').toLowerCase();return okType&&okW&&(!q||text.includes(q));
+  });
+  renderMap(Boolean(options.fit));renderLegend();
+}
+function renderLegend(){
+  const types=uniq(typeField);$('legend').innerHTML=types.map(t=>`<div class="legendItem"><i class="dot" style="background:${colorFor(t)}"></i><span>${esc(t)}</span></div>`).join('')||'<div class="hint">لا توجد أنواع لعرضها.</div>';
+}
+function renderStats(){
+  $('sTotal').textContent=rows.length.toLocaleString('ar');$('sPopulation').textContent=rows.reduce((s,r)=>s+num(r[popField]),0).toLocaleString('ar');$('sTypes').textContent=uniq(typeField).length.toLocaleString('ar');$('sWilayas').textContent=uniq(wilayaField).length.toLocaleString('ar');
+  const byType={};rows.forEach(r=>{const k=r[typeField]||'غير محدد';byType[k]=(byType[k]||0)+1});
+  $('typeStats').innerHTML=Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const pct=rows.length?v/rows.length*100:0;return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${esc(k)}</span><b>${v}</b></div><div class="kpiBar"><i style="width:${pct}%"></i></div></div>`}).join('')||'<div class="empty">لا توجد بيانات</div>';
+  const byW={};rows.forEach(r=>{const k=r[wilayaField]||'غير محدد';byW[k]=(byW[k]||0)+num(r[popField])});const max=Math.max(1,...Object.values(byW));
+  $('wilayaStats').innerHTML=Object.entries(byW).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${esc(k)}</span><b>${v.toLocaleString('ar')}</b></div><div class="kpiBar"><i style="width:${v/max*100}%"></i></div></div>`).join('')||'<div class="empty">لا توجد بيانات</div>';
+}
+function renderSearchResults(){
+  const q=$('searchAll').value.trim().toLowerCase(),type=$('searchType').value,w=$('searchWilaya').value;
+  const list=rows.filter(r=>{const txt=Object.values(r).join(' ').toLowerCase();return(!q||txt.includes(q))&&(!type||String(r[typeField]??'')===type)&&(!w||String(r[wilayaField]??'')===w)}).slice(0,100);
+  $('searchResults').innerHTML=list.length?list.map(r=>{const id=rowKey(r);return `<button class="result" type="button" data-search-id="${esc(id)}" style="width:100%;text-align:right"><b>${esc(r[nameField]||r.id||'موقع')}</b><small>${esc(r[typeField]||'')} · ${esc(r[wilayaField]||'')} · ${esc(r[villageField]||'')}</small></button>`}).join(''):'<div class="empty">لا توجد نتائج</div>';
+  $('searchResults').querySelectorAll('[data-search-id]').forEach(btn=>btn.addEventListener('click',()=>focusRow(btn.dataset.searchId)));
+}
+function focusRow(id){
+  const row=rows.find(r=>rowKey(r)===String(id));if(!row)return;
+  const lat=num(row[latField]),lng=num(row[lngField]);if(!lat||!lng){toast('لا توجد إحداثيات صحيحة لهذا السجل',false);return}
+  map.setView([lat,lng],15,{animate:true});
+  const marker=markersById.get(rowKey(row));if(marker){markerCluster.zoomToShowLayer(marker,()=>marker.openPopup())}else{toast('الموقع غير ظاهر بسبب الفلتر الحالي',false)}
+}
+
+function renderTable(){
+  const t=$('dataTable');if(!rows.length){t.innerHTML='<tbody><tr><td class="empty">لا توجد بيانات</td></tr></tbody>';return}
+  const shown=columns.slice(0,Math.min(columns.length,10));
+  t.innerHTML='<thead><tr>'+shown.map(c=>`<th>${esc(c)}</th>`).join('')+'<th>إجراء</th></tr></thead><tbody>'+rows.slice(0,250).map(r=>`<tr>${shown.map(c=>`<td>${esc(r[c])}</td>`).join('')}<td><button class="btn small" type="button" data-edit-id="${esc(rowKey(r))}">تعديل</button></td></tr>`).join('')+'</tbody>';
+  t.querySelectorAll('[data-edit-id]').forEach(btn=>btn.addEventListener('click',()=>openEdit(btn.dataset.editId)));
+}
+function openEdit(id=''){
+  editingId=String(id||'');const row=editingId?rows.find(x=>rowKey(x)===editingId):{};if(editingId&&!row){toast('لم يتم العثور على السجل',false);return}
+  $('modalTitle').textContent=editingId?'تعديل موقع':'إضافة موقع';$('deleteBtn').style.display=editingId?'inline-block':'none';
+  $('editForm').innerHTML=columns.map(c=>{const val=row[c]??'';const readonly=(c==='id'&&editingId)?'readonly':'';return `<div class="field"><label for="edit_${encodeURIComponent(c)}">${esc(c)}</label><input id="edit_${encodeURIComponent(c)}" data-col="${esc(c)}" value="${esc(val)}" ${readonly}></div>`}).join('');
+  $('modalBack').classList.add('show');$('modalBack').setAttribute('aria-hidden','false');
+}
+function closeModal(){ $('modalBack').classList.remove('show');$('modalBack').setAttribute('aria-hidden','true');editingId=null }
+function formObject(){const o={};$('editForm').querySelectorAll('[data-col]').forEach(i=>o[i.dataset.col]=i.value);return o}
+
+async function request(url,options={}){
+  const res=await fetch(url,{...options,headers:{Accept:'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
+  let payload=null;try{payload=await res.json()}catch{}
+  if(!res.ok){const msg=payload?.error||payload?.message||`HTTP ${res.status}`;throw new Error(msg)}
+  return payload;
+}
+async function saveRow(){
+  const data=formObject();
+  try{
+    if(editingId){if(!data.id)throw new Error('معرف الصف مفقود');await request(`${API}/id/${encodeURIComponent(editingId)}`,{method:'PATCH',body:JSON.stringify({data})});toast('تم تحديث البيانات');}
+    else{await request(API,{method:'POST',body:JSON.stringify({data})});toast('تمت إضافة البيانات')}
+    closeModal();await refreshData(false);
+  }catch(e){toast(`تعذر حفظ البيانات: ${e.message}`,false)}
+}
+async function deleteRow(){
+  if(!editingId)return;if(!confirm('هل تريد حذف هذا الصف نهائياً من Google Sheet؟'))return;
+  try{await request(`${API}/id/${encodeURIComponent(editingId)}`,{method:'DELETE'});toast('تم حذف الصف');closeModal();await refreshData(false)}catch(e){toast(`تعذر حذف الصف: ${e.message}`,false)}
+}
+
+function csvEscape(v){const s=String(v??'');return `"${s.replace(/"/g,'""')}"`}
+function exportCSV(){const out=[columns.map(csvEscape).join(',')].concat(rows.map(r=>columns.map(c=>csvEscape(r[c])).join(','))).join('\r\n');downloadFile(new Blob(['\ufeff'+out],{type:'text/csv;charset=utf-8'}),'map-data.csv')}
+function exportJSON(){downloadFile(new Blob([JSON.stringify(rows,null,2)],{type:'application/json;charset=utf-8'}),'map-data.json')}
+function downloadFile(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function parseCSV(text){
+  const lines=[];let row=[],cell='',quote=false;
+  text=text.replace(/^\uFEFF/,'');
+  for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1];if(ch==='"'&&quote&&nx==='"'){cell+='"';i++;continue}if(ch==='"'){quote=!quote;continue}if(ch===','&&!quote){row.push(cell);cell='';continue}if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&nx==='\n')i++;row.push(cell);cell='';if(row.some(x=>x!==''))lines.push(row);row=[];continue}cell+=ch}
+  if(cell!==''||row.length){row.push(cell);if(row.some(x=>x!==''))lines.push(row)}
+  if(!lines.length)return [];
+  const heads=lines[0].map(x=>x.trim());return lines.slice(1).map(a=>Object.fromEntries(heads.map((h,i)=>[h,a[i]??'']))).filter(o=>Object.values(o).some(v=>v!==''));
+}
+async function importCSV(){
+  const file=$('csvFile').files[0];if(!file){toast('اختر ملف CSV أولاً',false);return}
+  try{const data=parseCSV(await file.text());if(!data.length){toast('الملف فارغ أو غير صالح',false);return}if(!confirm(`سيتم إضافة ${data.length} صف إلى Google Sheet. هل تريد المتابعة؟`))return;
+    let done=0;for(const item of data){await request(API,{method:'POST',body:JSON.stringify({data:item})});done++;}toast(`تم استيراد ${done} صف`);$('csvFile').value='';await refreshData(false);
+  }catch(e){toast(`تعذر الاستيراد: ${e.message}`,false)}
+}
+
+async function refreshData(fit=true){
+  setStatus('جاري تحديث البيانات…');$('loading').style.display='flex';
+  try{
+    const data=await request(API,{cache:'no-store'});if(!Array.isArray(data))throw new Error('صيغة البيانات غير متوقعة');
+    rows=data;columns=[...new Set(data.flatMap(r=>Object.keys(r)))];detectFields();populateFilters();filteredRows=[...rows];renderStats();renderLegend();renderTable();renderSearchResults();applyFilters({fit:false});initialMapFit=false;setStatus(`متصل · ${rows.length.toLocaleString('ar')} سجل`);
+    if(!nameField||!latField||!lngField){toast('تم تحميل البيانات، لكن بعض الحقول الأساسية لم تُكتشف تلقائياً. راجع أسماء الأعمدة.',false)}
+  }catch(e){setStatus('تعذر الاتصال');toast(`خطأ في تحميل SheetDB: ${e.message}`,false)}finally{$('loading').style.display='none'}
+}
+function openSettings(){document.querySelector('[data-panel="settingsPanel"]').click();$('apiUrlSetting').value=API}
+function saveSettings(){const value=$('apiUrlSetting').value.trim();if(!/^https:\/\/sheetdb\.io\/api\/v1\/[A-Za-z0-9_-]+$/.test(value)){toast('رابط SheetDB غير صحيح',false);return}API=value;localStorage.setItem(STORAGE_KEY,API);toast('تم حفظ الرابط وتحديث البيانات');refreshData(false)}
+function clearSettings(){localStorage.removeItem(STORAGE_KEY);location.reload()}
+
+function wireEvents(){
+  document.querySelectorAll('.nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');$(btn.dataset.panel).classList.add('active');if(btn.dataset.panel==='dataPanel')renderTable();if(btn.dataset.panel==='searchPanel')renderSearchResults();if(btn.dataset.panel==='mapPanel')setTimeout(()=>map?.invalidateSize(),50)}));
+  $('refreshBtn').addEventListener('click',()=>refreshData(false));$('settingsBtn').addEventListener('click',openSettings);$('typeFilter').addEventListener('change',()=>applyFilters());$('wilayaFilter').addEventListener('change',()=>applyFilters());$('quickSearch').addEventListener('input',()=>applyFilters());$('searchAll').addEventListener('input',renderSearchResults);$('searchType').addEventListener('change',renderSearchResults);$('searchWilaya').addEventListener('change',renderSearchResults);
+  $('addBtn').addEventListener('click',()=>openEdit(''));$('tableRefreshBtn').addEventListener('click',()=>renderTable());$('exportCsvBtn').addEventListener('click',exportCSV);$('exportJsonBtn').addEventListener('click',exportJSON);$('importCsvBtn').addEventListener('click',importCSV);$('saveSettingsBtn').addEventListener('click',saveSettings);$('clearSettingsBtn').addEventListener('click',clearSettings);$('closeModalBtn').addEventListener('click',closeModal);$('cancelModalBtn').addEventListener('click',closeModal);$('saveRowBtn').addEventListener('click',saveRow);$('deleteBtn').addEventListener('click',deleteRow);
+  $('modalBack').addEventListener('click',e=>{if(e.target===$('modalBack'))closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('modalBack').classList.contains('show'))closeModal()});
+}
+
+(async function boot(){
+  wireEvents();
+  if(typeof L==='undefined'){toast('تعذر تحميل Leaflet. تحقق من اتصال الإنترنت.',false);return}
+  initMap();
+  await refreshData(false);
+})();
+</script>
+</body>
+</html>
